@@ -2,13 +2,16 @@ import styles from './Header.module.scss';
 import classNames from 'classnames/bind';
 import images from '~/assets/images';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleXmark, faSpinner, faSearch, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
+import { faCircleXmark, faSpinner, faSearch, faEllipsisVertical, faSignOut } from '@fortawesome/free-solid-svg-icons';
 // import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css'; // optional
 import Tippy from '@tippyjs/react/headless'; // different import path!
 import { Wrapper as PopperWrapper } from '~/components/Popper';
 import { useState, useEffect } from 'react';
 import AccountItem from '~/components/AccountItem';
+import Button from '~/components/Button';
+import { faUser } from '@fortawesome/free-solid-svg-icons';
+
 const cx = classNames.bind(styles);
 
 const Header = () => {
@@ -61,15 +64,20 @@ const Header = () => {
                     </div>
                 </Tippy>
                 <div className={cx('actions')}>
-                    <button className={cx('upload')}>
-                        <span>Upload</span>
-                    </button>
-                    <button>
-                        <span>Log in</span>
-                    </button>
-                    <button>
+                    <Button text>Upload</Button>
+                    <Button
+                        primary
+                        leftIcon={<FontAwesomeIcon icon={faUser} className={cx('icon')} />}
+                        // rightIcon={<FontAwesomeIcon icon={faSignOut} className={cx('icon')} />}
+                    >
+                        Log in
+                    </Button>
+                    {/* <Button outline className={cx('custom-btn')} rounded>
+                        Getapp
+                    </Button> */}
+                    <Button>
                         <FontAwesomeIcon icon={faEllipsisVertical} className={cx('more-btn')} />
-                    </button>
+                    </Button>
                 </div>
             </div>
         </header>

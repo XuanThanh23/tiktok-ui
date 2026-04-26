@@ -70,8 +70,6 @@
     }
 }
 
-.clear {
-}
 .search .loading {
     animation: spinner 0.8s linear infinite;
 }
@@ -120,6 +118,11 @@
     color: rgba(22, 24, 35, 0.5);
 }
 
+.actions {
+    display: flex;
+    align-items: center;
+}
+
 @keyframes spinner {
     from {
         transform: translateY(-50%) rotate(0deg);
@@ -127,4 +130,9 @@
     to {
         transform: translateY(-50%) rotate(360deg);
     }
+}
+
+.custom-btn {
+    font-size: 1.6rem;
+    border-color: transparent;
 }
