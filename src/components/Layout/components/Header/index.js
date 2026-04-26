@@ -2,7 +2,7 @@ import styles from './Header.module.scss';
 import classNames from 'classnames/bind';
 import images from '~/assets/images';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleXmark, faSpinner, faSearch, faEllipsisVertical, faSignOut } from '@fortawesome/free-solid-svg-icons';
+import { faCircleXmark, faSpinner, faSearch, faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 // import Tippy from '@tippyjs/react';
 import 'tippy.js/dist/tippy.css'; // optional
 import Tippy from '@tippyjs/react/headless'; // different import path!
@@ -10,9 +10,29 @@ import { Wrapper as PopperWrapper } from '~/components/Popper';
 import { useState, useEffect } from 'react';
 import AccountItem from '~/components/AccountItem';
 import Button from '~/components/Button';
-import { faUser } from '@fortawesome/free-solid-svg-icons';
+import { faLanguage, faCircleQuestion, faKeyboard, faUser } from '@fortawesome/free-solid-svg-icons';
+import Menu from '~/components/Popper/Menu';
 
 const cx = classNames.bind(styles);
+
+const MENU_ITEMS = [
+    {
+        id: 1,
+        title: 'English',
+        icon: <FontAwesomeIcon icon={faLanguage} className={cx('hihi')} />,
+    },
+    {
+        id: 2,
+        title: 'Feedback and help',
+        icon: <FontAwesomeIcon icon={faCircleQuestion} className={cx('hihi')} />,
+        to: '/feedback',
+    },
+    {
+        id: 3,
+        title: 'Keyboard shortcuts',
+        icon: <FontAwesomeIcon icon={faKeyboard} className={cx('hihi')} />,
+    },
+];
 
 const Header = () => {
     const [searchResult, setSearchResult] = useState([1, 2, 3]);
@@ -72,12 +92,12 @@ const Header = () => {
                     >
                         Log in
                     </Button>
-                    {/* <Button outline className={cx('custom-btn')} rounded>
-                        Getapp
-                    </Button> */}
-                    <Button>
-                        <FontAwesomeIcon icon={faEllipsisVertical} className={cx('more-btn')} />
-                    </Button>
+
+                    <Menu items={MENU_ITEMS}>
+                        <button className={cx('more-btn')}>
+                            <FontAwesomeIcon icon={faEllipsisVertical} className={cx('hihi')} />
+                        </button>
+                    </Menu>
                 </div>
             </div>
         </header>

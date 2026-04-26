@@ -89,7 +89,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 52px;
+    width: var(--search-right-space);
     height: 100%;
     border-top-right-radius: var(--search-border-radius);
     border-bottom-right-radius: var(--search-border-radius);
@@ -129,6 +129,17 @@
     }
     to {
         transform: translateY(-50%) rotate(360deg);
+    }
+}
+
+.more-btn {
+    font-size: 2rem;
+    padding: 4px 8px;
+    margin-left: 28px;
+    cursor: pointer;
+    background-color: transparent;
+    &:hover {
+        background-color: rgba(22, 24, 35, 0.08);
     }
 }
 

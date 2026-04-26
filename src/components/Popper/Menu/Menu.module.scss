@@ -1,0 +1,21 @@
+//MenuItems
+.menu {
+    width: 224px;
+
+    .menu-item {
+        width: 100%;
+        justify-content: flex-start;
+        margin-left: 0;
+        border-radius: 0;
+        font-weight: 500;
+        padding: 10px 16px;
+
+        &:hover {
+            background-color: rgba(22, 24, 25, 0.03);
+        }
+    }
+}
+
+.menu-items {
+    padding-bottom: 8px;
+}
