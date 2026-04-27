@@ -20,6 +20,46 @@ const MENU_ITEMS = [
         id: 1,
         title: 'English',
         icon: <FontAwesomeIcon icon={faLanguage} className={cx('hihi')} />,
+        children: {
+            title: 'Language',
+            data: [
+                {
+                    type: 'language',
+                    code: 'en',
+                    title: 'English',
+                },
+                {
+                    type: 'language',
+                    code: 'vi',
+                    title: 'Tiếng Việt',
+                },
+                {
+                    type: 'language',
+                    code: 'fr',
+                    title: 'Tiếng Pháp',
+                },
+                {
+                    type: 'language',
+                    code: 'lao',
+                    title: 'Tiếng Lào',
+                },
+                {
+                    type: 'language',
+                    code: 'cambodian',
+                    title: 'Tiếng Campuchia',
+                },
+                {
+                    type: 'language',
+                    code: 'chinese',
+                    title: 'Tiếng Trung',
+                },
+                {
+                    type: 'language',
+                    code: 'thailand',
+                    title: 'Tiếng Thái',
+                },
+            ],
+        },
     },
     {
         id: 2,
@@ -42,6 +82,16 @@ const Header = () => {
             setSearchResult([]);
         }, 0);
     }, []);
+
+    const handleMenuChange = (item) => {
+        switch (item.type) {
+            case 'language':
+                console.log(item.title);
+                break;
+            default:
+                break;
+        }
+    };
 
     return (
         <header className={cx('wrapper')}>
@@ -93,7 +143,7 @@ const Header = () => {
                         Log in
                     </Button>
 
-                    <Menu items={MENU_ITEMS}>
+                    <Menu items={MENU_ITEMS} onChange={handleMenuChange}>
                         <button className={cx('more-btn')}>
                             <FontAwesomeIcon icon={faEllipsisVertical} className={cx('hihi')} />
                         </button>
