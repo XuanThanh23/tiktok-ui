@@ -148,3 +148,28 @@
     font-size: 1.6rem;
     border-color: transparent;
 }
+
+//Action
+.actions {
+    display: flex;
+    align-items: center;
+}
+.action-btn {
+    font-size: 2.2rem;
+    background-color: transparent;
+    cursor: pointer;
+    padding: 4px 8px;
+    color: #161823;
+    &:hover {
+        background-color: rgba(22, 24, 35, 0.08);
+    }
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-left: 12px;
+    cursor: pointer;
+}
