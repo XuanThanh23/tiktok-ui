@@ -22,13 +22,15 @@ import {
     faLanguage,
     faCircleQuestion,
     faKeyboard,
-    faUser,
     faCoins,
     faSignOut,
     faGears,
 } from '@fortawesome/free-solid-svg-icons';
 import Menu from '~/components/Popper/Menu';
 import 'tippy.js/dist/tippy.css';
+import { UploadIcon } from '~/components/Icons';
+import { UserIcon } from '~/components/Icons';
+import Image from '~/components/Images';
 
 const cx = classNames.bind(styles);
 
@@ -115,7 +117,7 @@ const Header = () => {
         {
             id: 1,
             title: 'Profile',
-            icon: <FontAwesomeIcon icon={faUser} className={cx('hihi')} />,
+            icon: <UserIcon className={cx('hihi')} />,
             to: '/@',
         },
         {
@@ -145,7 +147,7 @@ const Header = () => {
         <header className={cx('wrapper')}>
             <div className={cx('inner')}>
                 <div className={cx('logo')}>
-                    <img src={images.logo} alt="TikTok" />
+                    <Image src={images.logo} alt="TikTok" />
                 </div>
                 <HeadlessTippy
                     interactive={true}
@@ -185,9 +187,9 @@ const Header = () => {
                 <div className={cx('actions')}>
                     {currentUser ? (
                         <>
-                            <Tippy trigger="click" delay={[0, 200]} content="Upload video" placement="bottom">
+                            <Tippy delay={[0, 200]} content="Upload video" placement="bottom">
                                 <button className={cx('action-btn')}>
-                                    <FontAwesomeIcon icon={faCloudUpload} className={cx('icon')} />
+                                    <UploadIcon />
                                 </button>
                             </Tippy>
 
@@ -202,7 +204,7 @@ const Header = () => {
                             <Button text>Upload</Button>
                             <Button
                                 primary
-                                leftIcon={<FontAwesomeIcon icon={faUser} className={cx('icon')} />}
+                                leftIcon={<UserIcon className={cx('icon')} />}
                                 // rightIcon={<FontAwesomeIcon icon={faSignOut} className={cx('icon')} />}
                             >
                                 Log in
@@ -211,7 +213,7 @@ const Header = () => {
                     )}
                     <Menu items={currentUser ? userMenu : MENU_ITEMS} onChange={handleMenuChange}>
                         {currentUser ? (
-                            <img
+                            <Image
                                 className={cx('user-avatar')}
                                 src="https://p16-common-sign.tiktokcdn.com/tos-alisg-avt-0068/9681eb5ebaa11fe1571f8ba178736fe0~tplv-tiktokx-cropcenter:100:100.jpeg?dr=14579&refresh_token=136086d4&x-expires=1777197600&x-signature=IWWDOqxhK1kYpMrPfBREOnRgcrU%3D&t=4d5b0474&ps=13740610&shp=30310797&shcp=c1333099&idc=my"
                                 alt="User avatar"
