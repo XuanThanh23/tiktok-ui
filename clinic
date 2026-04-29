@@ -1,0 +1,836 @@
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { SingleSelect } from "@/components/ui/single-select";
+import { clinicConfigSchema, type ClinicConfigFormData } from "./schema";
+import { useVtpGetLocation } from "@/hooks/useVtpGetLocation";
+import { ImageUpload } from "@/components/ui/image-upload";
+import axios from "axios";
+import { FloatingAlert } from "@/components/ui/floating-alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface ClinicConfigFormProps {
+  isLoading?: boolean;
+}
+
+export function ClinicConfigForm({ isLoading = false }: ClinicConfigFormProps) {
+  const isFirstLoad = useRef(true);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [openCancelConfirm, setOpenCancelConfirm] = useState(false);
+  const [apiValues, setApiValues] = useState<ClinicConfigFormData>({
+    name: "",
+    phone: "",
+    email: "",
+    province: "",
+    district: "",
+    ward: "",
+    address: "",
+    businessRegistrationNumber: "",
+    description: "",
+    avatar: [],
+    photos: [],
+  });
+
+  // ✅ Ref để luôn có giá trị photos mới nhất, tránh stale closure
+  const apiPhotosRef = useRef<ClinicConfigFormData["photos"]>([]);
+
+  const [alertState, setAlertState] = useState({
+    visible: false,
+    variant: "success" as "success" | "error",
+    title: "",
+    description: "",
+  });
+
+  type ClinicMediaItem = {
+    id: string;
+    media?: {
+      id: string;
+      url?: string;
+    };
+  };
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<ClinicConfigFormData>({
+    resolver: zodResolver(clinicConfigSchema),
+    defaultValues: apiValues,
+  });
+
+  const apiURL = import.meta.env.VITE_API_URL;
+
+  const fetchClinicData = useCallback(async () => {
+    try {
+      // Bước 1: lấy ID clinic từ list (cần auth cookie)
+      const listRes = await axios.get(`${apiURL}/api/clinics`, {
+        withCredentials: true,
+      });
+      const clinicId = listRes.data?.data?.[0]?.id;
+
+      if (!clinicId) {
+        console.warn("Không có dữ liệu clinic");
+        return;
+      }
+
+      // Bước 2: lấy chi tiết clinic đầy đủ (kèm clinicMedias) qua /api/clinics/:id
+      const detailRes = await axios.get(`${apiURL}/api/clinics/${clinicId}`, {
+        withCredentials: true,
+      });
+      const clinic = detailRes.data;
+
+      if (!clinic) {
+        console.warn("Không thể lấy chi tiết clinic");
+        return;
+      }
+
+      // clinicMedias có thể là array hoặc { data: [...] }
+      const rawMedias: ClinicMediaItem[] = Array.isArray(clinic.clinicMedias)
+        ? clinic.clinicMedias
+        : Array.isArray(clinic.clinicMedias?.data)
+          ? clinic.clinicMedias.data
+          : [];
+
+      const fetchedValues: ClinicConfigFormData = {
+        name: clinic.name ?? "",
+        phone: clinic.phone ?? "",
+        email: clinic.email ?? "",
+        province: clinic.address?.PROVINCE?.PROVINCE_ID
+          ? String(clinic.address.PROVINCE.PROVINCE_ID)
+          : "",
+        district: clinic.address?.DISTRICT?.DISTRICT_ID
+          ? String(clinic.address.DISTRICT.DISTRICT_ID)
+          : "",
+        ward: clinic.address?.WARDS?.WARDS_ID
+          ? String(clinic.address.WARDS.WARDS_ID)
+          : "",
+        address: clinic.address?.DETAIL ?? "",
+        businessRegistrationNumber: clinic.businessRegistrationNumber ?? "",
+        description: clinic.description ?? "",
+        avatar: clinic.media?.url
+          ? [
+              {
+                uid: clinic.media.id,
+                mediaId: clinic.media.id,
+                url: clinic.media.url,
+              },
+            ]
+          : [],
+        photos: rawMedias
+          .filter((item: ClinicMediaItem) => item?.media)
+          .map((item: ClinicMediaItem) => ({
+            uid: item.media!.id,
+            mediaId: item.id,
+            url: item.media!.url ?? "",
+          })),
+      };
+
+      setApiValues(fetchedValues);
+    } catch (error) {
+      console.error("Failed to fetch clinics:", error);
+    }
+  }, [apiURL]);
+
+  useEffect(() => {
+    fetchClinicData();
+  }, [fetchClinicData]);
+
+  useEffect(() => {
+    if (!apiValues.name) return;
+    reset({
+      name: apiValues.name,
+      phone: apiValues.phone,
+      email: apiValues.email,
+      province: apiValues.province,
+      district: apiValues.district,
+      ward: apiValues.ward,
+      address: apiValues.address,
+      businessRegistrationNumber: apiValues.businessRegistrationNumber,
+      description: apiValues.description,
+      avatar: apiValues.avatar ?? [],
+      photos: apiValues.photos ?? [],
+    });
+
+    // ✅ Sync ref mỗi khi apiValues thay đổi
+    apiPhotosRef.current = apiValues.photos ?? [];
+
+    const timer = setTimeout(() => {
+      isFirstLoad.current = false;
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [apiValues, reset]);
+
+  const selectedProvince = watch("province");
+  const selectedDistrict = watch("district");
+  const selectedWard = watch("ward");
+
+  const provinceId = selectedProvince ? Number(selectedProvince) : null;
+  const districtId = selectedDistrict ? Number(selectedDistrict) : null;
+  const wardId = selectedWard ? Number(selectedWard) : null;
+
+  const { provinces, districts, wards, isLoadingDistricts, isLoadingWards } =
+    useVtpGetLocation({
+      provinceId,
+      districtId,
+      wardId,
+    });
+
+  useEffect(() => {
+    if (isFirstLoad.current) return;
+    setValue("district", "");
+    setValue("ward", "");
+  }, [selectedProvince, setValue]);
+
+  useEffect(() => {
+    if (isFirstLoad.current) return;
+    setValue("ward", "");
+  }, [selectedDistrict, setValue]);
+
+  const handleFormSubmit = async (data: ClinicConfigFormData) => {
+    try {
+      setSubmitLoading(true);
+
+      // ========================================
+      // FIND LOCATION OBJECTS
+      // ========================================
+      const selectedProvinceObj = provinces.find(
+        (p) => String(p.PROVINCE_ID) === data.province,
+      );
+
+      const selectedDistrictObj = districts.find(
+        (d) => String(d.DISTRICT_ID) === data.district,
+      );
+
+      const selectedWardObj = wards.find(
+        (w) => String(w.WARDS_ID) === data.ward,
+      );
+
+      // ========================================
+      // PHOTO LOGIC
+      // ========================================
+      const currentPhotos = apiPhotosRef.current ?? [];
+
+      const newPhotoFiles = data.photos?.filter((item) => item.file) ?? [];
+
+      const existingPhotoIds =
+        data.photos
+          ?.filter((item) => !item.file && item.mediaId)
+          .map((item) => item.mediaId as string) ?? [];
+
+      const previousPhotoIds = currentPhotos
+        .filter((item) => item.mediaId)
+        .map((item) => item.mediaId as string);
+
+      const deletePhotoIds = previousPhotoIds.filter(
+        (id) => !existingPhotoIds.includes(id),
+      );
+
+      // Tổng ảnh thực tế sau update
+      const totalPhotos =
+        currentPhotos.length - deletePhotoIds.length + newPhotoFiles.length;
+
+      if (totalPhotos > 5) {
+        throw new Error(
+          `Tối đa 5 ảnh minh họa. Sau cập nhật sẽ có ${totalPhotos} ảnh.`,
+        );
+      }
+
+      // ========================================
+      // AVATAR LOGIC
+      // ========================================
+      const newAvatarFiles = data.avatar?.filter((item) => item.file) ?? [];
+
+      const existingAvatar = data.avatar?.filter((item) => !item.file) ?? [];
+
+      // ========================================
+      // MAIN UPDATE REQUEST
+      // Gửi deletePhotoIds + photos mới trong cùng 1 request
+      // Backend sẽ xử lý xóa trước, rồi thêm mới sau
+      // ========================================
+      const formData = new FormData();
+
+      // BASIC INFO
+      formData.append("name", data.name);
+
+      if (data.phone) {
+        formData.append("phone", data.phone);
+      }
+
+      if (data.businessRegistrationNumber) {
+        formData.append(
+          "businessRegistrationNumber",
+          data.businessRegistrationNumber,
+        );
+      }
+
+      if (data.description) {
+        formData.append("description", data.description);
+      }
+
+      formData.append(
+        "address",
+        JSON.stringify({
+          PROVINCE: selectedProvinceObj
+            ? {
+                PROVINCE_ID: selectedProvinceObj.PROVINCE_ID,
+                PROVINCE_CODE: selectedProvinceObj.PROVINCE_CODE,
+                PROVINCE_NAME: selectedProvinceObj.PROVINCE_NAME,
+              }
+            : null,
+          DISTRICT: selectedDistrictObj
+            ? {
+                DISTRICT_ID: selectedDistrictObj.DISTRICT_ID,
+                DISTRICT_NAME: selectedDistrictObj.DISTRICT_NAME,
+                PROVINCE_ID: selectedDistrictObj.PROVINCE_ID,
+              }
+            : null,
+          WARDS: selectedWardObj
+            ? {
+                WARDS_ID: selectedWardObj.WARDS_ID,
+                WARDS_NAME: selectedWardObj.WARDS_NAME,
+                DISTRICT_ID: selectedWardObj.DISTRICT_ID,
+              }
+            : null,
+          DETAIL: data.address,
+        }),
+      );
+
+      if (newAvatarFiles.length > 0) {
+        formData.append("avatar", newAvatarFiles[0].file as File);
+      } else if (existingAvatar.length === 0) {
+        formData.append("deleteAvatar", "true");
+      }
+
+      // ========================================
+      // DELETE PHOTOS (trong cùng request)
+      // ========================================
+      deletePhotoIds.forEach((id) => {
+        formData.append("deletePhotoIds", id);
+      });
+
+      // ========================================
+      // NEW PHOTOS
+      // ========================================
+      newPhotoFiles.forEach((item) => {
+        formData.append("photos", item.file as File);
+      });
+      for (const pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+      const response = await axios.patch(`${apiURL}/api/clinics/me`, formData, {
+        withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error(response.data?.message || "Cập nhật thất bại");
+      }
+
+      // ========================================
+      // REFRESH DATA
+      // ========================================
+      await fetchClinicData();
+
+      setAlertState({
+        visible: true,
+        variant: "success",
+        title: "Thành công",
+        description: "Cập nhật thông tin phòng khám thành công",
+      });
+
+      setOpenConfirm(false);
+    } catch (error) {
+      setOpenConfirm(false);
+
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data?.message ?? `HTTP ${error.response?.status}`)
+        : error instanceof Error
+          ? error.message
+          : "Đã xảy ra lỗi";
+
+      setAlertState({
+        visible: true,
+        variant: "error",
+        title: "Thất bại",
+        description: message,
+      });
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <form className="w-full">
+        <div className="bg-white rounded-2xl p-6 space-y-8">
+          {/* ================= TITLE ================= */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Thông Tin Phòng Khám
+            </h2>
+          </div>
+
+          {/* ================= GRID LEFT ================= */}
+          <div className="grid grid-cols-12 gap-4">
+            <div className="col-span-6">
+              <div className="grid grid-cols-2 gap-4">
+                {/* NAME */}
+                <div className="col-span-2 flex flex-col gap-2">
+                  <Label>
+                    Tên phòng khám <span className=" text-red-600">*</span>
+                  </Label>
+                  <div
+                    className={`rounded-lg border ${errors.name ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                  >
+                    <Controller
+                      name="name"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          className="h-10"
+                          placeholder="Nhập tên phòng khám"
+                        />
+                      )}
+                    />
+                  </div>
+                  {errors.name && (
+                    <p className="text-red-600 text-sm">
+                      {errors.name.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* LOCATION */}
+                <div className="col-span-2 grid grid-cols-3 gap-2.5">
+                  <div className="flex flex-col gap-2">
+                    <Label>
+                      Tỉnh thành Phố <span className="text-red-600">*</span>
+                    </Label>
+                    <div
+                      className={`rounded-lg border ${errors.province ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                    >
+                      <Controller
+                        name="province"
+                        control={control}
+                        render={({ field }) => (
+                          <SingleSelect
+                            {...field}
+                            options={provinces.map((p) => ({
+                              value: String(p.PROVINCE_ID),
+                              label: p.PROVINCE_NAME,
+                            }))}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Chọn tỉnh thành"
+                          />
+                        )}
+                      />
+                    </div>
+                    {errors.province && (
+                      <p className="text-red-600 text-sm">
+                        {errors.province.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label>
+                      Quận/Huyện <span className="text-red-600">*</span>
+                    </Label>
+                    <div
+                      className={`rounded-lg border ${errors.district ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                    >
+                      <Controller
+                        name="district"
+                        control={control}
+                        render={({ field }) => (
+                          <SingleSelect
+                            {...field}
+                            options={
+                              isLoadingDistricts
+                                ? []
+                                : districts.map((d) => ({
+                                    value: String(d.DISTRICT_ID),
+                                    label: d.DISTRICT_NAME,
+                                  }))
+                            }
+                            value={field.value}
+                            onChange={field.onChange}
+                            disabled={!selectedProvince || isLoadingDistricts}
+                            placeholder={
+                              isLoadingDistricts
+                                ? "Đang tải..."
+                                : "Chọn quận huyện"
+                            }
+                          />
+                        )}
+                      />
+                    </div>
+                    {errors.district && (
+                      <p className="text-red-600 text-sm">
+                        {errors.district.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label>
+                      Xã/Phường <span className="text-red-600">*</span>
+                    </Label>
+                    <div
+                      className={`rounded-lg border ${errors.ward ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                    >
+                      <Controller
+                        name="ward"
+                        control={control}
+                        render={({ field }) => (
+                          <SingleSelect
+                            {...field}
+                            options={
+                              isLoadingWards
+                                ? []
+                                : wards.map((w) => ({
+                                    value: String(w.WARDS_ID),
+                                    label: w.WARDS_NAME,
+                                  }))
+                            }
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder={
+                              isLoadingWards ? "Đang tải..." : "Chọn xã phường"
+                            }
+                            disabled={!selectedDistrict || isLoadingWards}
+                          />
+                        )}
+                      />
+                    </div>
+                    {errors.ward && (
+                      <p className="text-red-600 text-sm">
+                        {errors.ward.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* ADDRESS */}
+                <div className="col-span-2 flex flex-col gap-2">
+                  <Label>
+                    Số nhà, tên đường <span className="text-red-600">*</span>
+                  </Label>
+                  <div
+                    className={`rounded-lg border ${errors.address ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                  >
+                    <Controller
+                      name="address"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          className="h-10"
+                          placeholder="Nhập địa chỉ chi tiết"
+                        />
+                      )}
+                    />
+                  </div>
+                  {errors.address && (
+                    <p className="text-red-600 text-sm">
+                      {errors.address.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ================= RIGHT SIDE ================= */}
+            <div className="col-span-6 space-y-4">
+              {/* BUSINESS */}
+              <div className="flex flex-col gap-2">
+                <Label>
+                  Số đăng ký kinh doanh <span className="text-red-600">*</span>
+                </Label>
+                <div
+                  className={`rounded-lg border ${errors.businessRegistrationNumber ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                >
+                  <Controller
+                    name="businessRegistrationNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        className="h-10"
+                        placeholder="Nhập số đăng ký kinh doanh"
+                        inputMode="numeric"
+                        maxLength={10}
+                        value={field.value || ""}
+                        onChange={(e) => {
+                          const onlyNumber = e.target.value.replace(/\D/g, "");
+                          field.onChange(onlyNumber);
+                        }}
+                      />
+                    )}
+                  />
+                </div>
+                {errors.businessRegistrationNumber && (
+                  <p className="text-red-600 text-sm">
+                    {errors.businessRegistrationNumber.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-6 gap-2">
+                {/* PHONE */}
+                <div className="col-span-3 flex flex-col gap-2">
+                  <Label>
+                    Số điện thoại <span className="text-red-600">*</span>
+                  </Label>
+                  <div
+                    className={`rounded-lg border ${errors.phone ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                  >
+                    <Controller
+                      name="phone"
+                      control={control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          className="h-10"
+                          placeholder="Nhập số điện thoại hotline"
+                          inputMode="numeric"
+                          maxLength={10}
+                          value={field.value || ""}
+                          onChange={(e) => {
+                            const onlyNumber = e.target.value.replace(
+                              /\D/g,
+                              "",
+                            );
+                            field.onChange(onlyNumber);
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-red-600 text-sm">
+                      {errors.phone.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* EMAIL */}
+                <div className="col-span-3 flex flex-col gap-2">
+                  <Label>Email</Label>
+                  <Controller
+                    name="email"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        disabled
+                        className="h-10 bg-gray-100"
+                        value={field.value || ""}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* DESCRIPTION */}
+              <div className="flex flex-col gap-2">
+                <Label>
+                  Mô tả <span className="text-red-600">*</span>
+                </Label>
+                <div
+                  className={`rounded-lg border ${errors.description ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+                >
+                  <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                      <Textarea
+                        {...field}
+                        className="min-h-20 resize-none"
+                        placeholder="Nhập mô tả phòng khám"
+                      />
+                    )}
+                  />
+                </div>
+                {errors.description && (
+                  <p className="text-red-600 text-sm">
+                    {errors.description.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ================= IMAGE UPLOAD ================= */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* AVATAR */}
+            <div className="col-span-2 flex flex-col gap-2">
+              <Label>
+                Ảnh đại diện(tối đa 1) <span className="text-red-600">*</span>
+              </Label>
+              <div
+                className={`rounded-lg border ${errors.avatar ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+              >
+                <Controller
+                  name="avatar"
+                  control={control}
+                  render={({ field }) => (
+                    <ImageUpload
+                      value={field.value ?? []}
+                      onChange={(files) => field.onChange(files)}
+                      maxFiles={1}
+                      maxSizeMB={5}
+                      showMainBadge={false}
+                    />
+                  )}
+                />
+              </div>
+              {errors.avatar && (
+                <p className="text-red-600 text-sm">{errors.avatar.message}</p>
+              )}
+            </div>
+
+            {/* CLINIC IMAGES */}
+            <div className="col-span-10 flex flex-col gap-2">
+              <Label>
+                Ảnh minh họa phòng khám(tối đa 5){" "}
+                <span className="text-red-600">*</span>
+              </Label>
+              <div
+                className={`rounded-lg border ${errors.photos ? "border-red-500 shadow-lg shadow-red-200" : "border-none"} `}
+              >
+                <Controller
+                  name="photos"
+                  control={control}
+                  render={({ field }) => (
+                    <ImageUpload
+                      value={field.value ?? []}
+                      onChange={(files) => field.onChange(files)}
+                      maxFiles={5}
+                      maxSizeMB={5}
+                      showMainBadge
+                    />
+                  )}
+                />
+              </div>
+              {errors.photos && (
+                <p className="text-red-600 text-sm">{errors.photos.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* ================= ACTION ================= */}
+          <div className="text-black flex justify-end gap-3 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              className="bg-[#FFFFFF]"
+              onClick={() => setOpenCancelConfirm(true)}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              className="text-[#FAFAFA] bg-[#0284C7] hover:bg-blue-700"
+              disabled={isLoading || submitLoading}
+              onClick={() => setOpenConfirm(true)}
+            >
+              {isLoading || submitLoading ? "Đang cập nhật..." : "Cập nhật"}
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      <AlertDialog open={openConfirm} onOpenChange={setOpenConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận cập nhật</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn lưu thay đổi thông tin phòng khám?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer hover:opacity-85">
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit(handleFormSubmit, () => {
+                  setOpenConfirm(false);
+                })();
+              }}
+              className="text-[#FAFAFA] bg-[#0284C7] hover:bg-blue-700 cursor-pointer"
+            >
+              Xác nhận
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={openCancelConfirm} onOpenChange={setOpenCancelConfirm}>
+        <AlertDialogContent className="max-w-100 rounded-xl border-none">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-[#222222]">
+              Hủy thay đổi?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 text-sm leading-relaxed">
+              Tất cả thay đổi chưa lưu sẽ bị mất. Bạn có chắc chắn muốn hủy cập
+              nhật?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 gap-2">
+            <AlertDialogCancel
+              onClick={() => setOpenCancelConfirm(false)}
+              className="rounded-lg border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+            >
+              Hủy bỏ
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                reset(apiValues);
+                setOpenCancelConfirm(false);
+                setAlertState({
+                  visible: true,
+                  variant: "success",
+                  title: "Thành công",
+                  description: "Đã hoàn tác thay đổi",
+                });
+              }}
+              className="text-[#FAFAFA] bg-[#0284C7] hover:bg-blue-700 cursor-pointer"
+            >
+              Xác nhận
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <FloatingAlert
+        visible={alertState.visible}
+        variant={alertState.variant}
+        title={alertState.title}
+        description={alertState.description}
+        onDismiss={() => setAlertState((prev) => ({ ...prev, visible: false }))}
+      />
+    </>
+  );
+}

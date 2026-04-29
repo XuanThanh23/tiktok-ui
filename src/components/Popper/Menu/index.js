@@ -14,11 +14,11 @@ function Menu({ children, items = [], onChange = defauFn, ...passProps }) {
     const [history, setHistory] = useState([{ data: items }]);
     const current = history[history.length - 1];
     const renderItems = () => {
-        return current.data.map((item) => {
+        return current.data.map((item, index) => {
             const isParent = !!item.children;
             return (
                 <MenuItem
-                    key={item.id}
+                    key={index}
                     data={item}
                     onClick={() => {
                         if (isParent) {
