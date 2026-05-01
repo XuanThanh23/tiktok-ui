@@ -9,8 +9,8 @@ const publicRoutes = [
     { path: '/', component: Home },
     { path: '/following', component: Following },
     { path: '/upload', component: Upload, layout: HeaderOnly },
-    { path: '/profile', component: Profile, layout: null },
     { path: '/search', component: Search },
+    { path: '/:username', component: Profile },
 ];
 
 const privateRoutes = [];

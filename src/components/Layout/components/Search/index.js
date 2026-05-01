@@ -7,6 +7,7 @@ import AccountItem from '~/components/AccountItem';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleXmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { SearchIcon } from '~/components/Icons';
+import { useDebounce } from '~/assets/hooks';
 
 const cx = classNames.bind(styles);
 
@@ -15,12 +16,25 @@ function Search() {
     const [searchValue, setSearchValue] = useState('');
     const [searchResult, setSearchResult] = useState([1, 2, 3, 4]);
     const [showResult, setShowResult] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const debouncedValue = useDebounce(searchValue, 500);
 
     useEffect(() => {
-        setTimeout(() => {
-            setSearchResult([123]);
-        }, 0);
-    }, [searchValue]);
+        if (!debouncedValue.trim()) {
+            setSearchResult([]);
+            return;
+        }
+        setIsLoading(true);
+        fetch(`https://jsonplaceholder.typicode.com/users?q=${encodeURIComponent(debouncedValue)}`)
+            .then((res) => res.json())
+            .then((res) => {
+                setSearchResult(res);
+                setIsLoading(false);
+            })
+            .catch(() => {
+                setIsLoading(false);
+            });
+    }, [debouncedValue]);
 
     const handleClear = () => {
         setSearchValue('');
@@ -42,10 +56,9 @@ function Search() {
                 <div className={cx('search-result')} tabIndex="-1" {...attrs}>
                     <PopperWrapper>
                         <h3 className={cx('search-title')}>Accounts</h3>
-                        <AccountItem />
-                        <AccountItem />
-                        <AccountItem />
-                        <AccountItem />
+                        {searchResult.map((result) => (
+                            <AccountItem key={result.id} data={result} />
+                        ))}
                     </PopperWrapper>
                 </div>
             )}
@@ -62,14 +75,16 @@ function Search() {
                     ref={inputRef}
                     onFocus={() => setShowResult(true)}
                 />
-                {!!searchValue && (
+                {!!searchValue && !isLoading && (
                     <button onClick={handleClear}>
                         <FontAwesomeIcon icon={faCircleXmark} className={cx('clear')} />
                     </button>
                 )}
-                {/* <button>
-                    <FontAwesomeIcon icon={faSpinner} className={cx('loading')} />
-                </button> */}
+                {isLoading && (
+                    <button>
+                        <FontAwesomeIcon icon={faSpinner} className={cx('loading')} />
+                    </button>
+                )}
 
                 <button className={cx('search-btn')}>
                     <SearchIcon />
