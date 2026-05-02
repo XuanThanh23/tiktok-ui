@@ -9,6 +9,8 @@ import { faCircleXmark, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { SearchIcon } from '~/components/Icons';
 import { useDebounce } from '~/assets/hooks';
 
+import * as searchService from '~/apiService/searchService';
+
 const cx = classNames.bind(styles);
 
 function Search() {
@@ -24,16 +26,15 @@ function Search() {
             setSearchResult([]);
             return;
         }
-        setIsLoading(true);
-        fetch(`https://jsonplaceholder.typicode.com/users?q=${encodeURIComponent(debouncedValue)}`)
-            .then((res) => res.json())
-            .then((res) => {
-                setSearchResult(res);
-                setIsLoading(false);
-            })
-            .catch(() => {
-                setIsLoading(false);
-            });
+
+        const fetchApi = async () => {
+            setIsLoading(true);
+            const result = await searchService.searchApi(debouncedValue);
+            setSearchResult(result);
+            setIsLoading(false);
+        };
+
+        fetchApi();
     }, [debouncedValue]);
 
     const handleClear = () => {
