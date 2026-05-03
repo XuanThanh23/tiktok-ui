@@ -11,6 +11,11 @@
     --search-top-space: 9px;
     --search-right-space: 52px;
     --search-button-width: 52px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
 }
 
 .inner {
@@ -23,6 +28,10 @@
     background-color: #fff;
 }
 .link {
+    display: flex;
+    align-items: center;
+}
+.logo {
     display: flex;
     align-items: center;
 }

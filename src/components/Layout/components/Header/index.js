@@ -20,6 +20,8 @@ import 'tippy.js/dist/tippy.css';
 import { UploadIcon, InboxIcon, UserIcon, MessageIcon } from '~/components/Icons';
 import Image from '~/components/Images';
 import Search from '~/components/Layout/components/Search';
+import { Link } from 'react-router-dom';
+import routesConfig from '~/config/routes';
 
 const cx = classNames.bind(styles);
 
@@ -31,6 +33,76 @@ const MENU_ITEMS = [
         children: {
             title: 'Language',
             data: [
+                {
+                    type: 'language',
+                    code: 'en',
+                    title: 'English',
+                },
+                {
+                    type: 'language',
+                    code: 'vi',
+                    title: 'Tiếng Việt',
+                },
+                {
+                    type: 'language',
+                    code: 'fr',
+                    title: 'Tiếng Pháp',
+                },
+                {
+                    type: 'language',
+                    code: 'lao',
+                    title: 'Tiếng Lào',
+                },
+                {
+                    type: 'language',
+                    code: 'cambodian',
+                    title: 'Tiếng Campuchia',
+                },
+                {
+                    type: 'language',
+                    code: 'chinese',
+                    title: 'Tiếng Trung',
+                },
+                {
+                    type: 'language',
+                    code: 'thailand',
+                    title: 'Tiếng Thái',
+                },
+                {
+                    type: 'language',
+                    code: 'en',
+                    title: 'English',
+                },
+                {
+                    type: 'language',
+                    code: 'vi',
+                    title: 'Tiếng Việt',
+                },
+                {
+                    type: 'language',
+                    code: 'fr',
+                    title: 'Tiếng Pháp',
+                },
+                {
+                    type: 'language',
+                    code: 'lao',
+                    title: 'Tiếng Lào',
+                },
+                {
+                    type: 'language',
+                    code: 'cambodian',
+                    title: 'Tiếng Campuchia',
+                },
+                {
+                    type: 'language',
+                    code: 'chinese',
+                    title: 'Tiếng Trung',
+                },
+                {
+                    type: 'language',
+                    code: 'thailand',
+                    title: 'Tiếng Thái',
+                },
                 {
                     type: 'language',
                     code: 'en',
@@ -128,9 +200,9 @@ const Header = () => {
     return (
         <header className={cx('wrapper')}>
             <div className={cx('inner')}>
-                <div className={cx('logo')}>
+                <Link to={routesConfig.home} className={cx('logo')}>
                     <Image src={images.logo} alt="TikTok" />
-                </div>
+                </Link>
 
                 <Search />
                 <div className={cx('actions')}>
