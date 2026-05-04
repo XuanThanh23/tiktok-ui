@@ -1,8 +1,8 @@
-import * as request from '~/untils/request';
+import * as httpRequest from '~/untils/httpRequest';
 
 export const searchApi = async (q, type = 'less') => {
     try {
-        const result = await request.get(`users`, {
+        const result = await httpRequest.get(`users`, {
             params: {
                 q,
                 type,
